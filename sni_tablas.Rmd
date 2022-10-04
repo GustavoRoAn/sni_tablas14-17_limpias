@@ -1,0 +1,250 @@
+---
+title: "Tablas SNI Modificadas (2014-2017)"
+author: "Gustavo Rojas Andrade"
+date: "2022-10-04"
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 5
+    highlight: espresso
+    theme: readable
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Investigadorxs del Sistema Nacional de Investigadores 2014-2017
+
+Se proporcionan los códigos de las modificaciones de las tablas del personal de Investigación adscritxs al *Sistema Nacional de investigadores*, disponibles del **Portal de Transparencia** del **Gobierno Federal** de México. Dicha base de dato se puede encontrar en el siguiente ***[enlace](https://www.siicyt.gob.mx/index.php/s191-sistema-nacional-de-investigadores-sni/2-uncategorised/220-bases-de-datos-abiertas-s191)***. Se omite la revisión del contenido de las tablas, pero se éste se efectuó de manera previa en trabajos anteriores.
+
+Las tablas creadas a partir de esta información están disponibles en `Kaggle`, en el ***[enlace_2](https://www.kaggle.com/datasets/gusrorand/sni-2014a2017)***.
+
+# Metadatos
+
+Los datos recolectados provienen de la colaboración del Consejo Nacional de Ciencia y Tecnología (CONACYT), junto con el sistema integrado de información sobre investigación científica, desarrollo tecnológico e innovación (siicyt) y el Gobierno de México. La información recolectada se compone de seis tablas que contienen la información de *investigadores vigentes* comprendida entre los periodos de 2014 al 2017. Tres de las tablas contienen además información segmentada por área de conocimiento; mientras que existen tres tablas correspondientes al 2015.
+
+```{r Tablas, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(skimr)
+library(readr)
+library(ggplot2)
+library(knitr)
+
+t2014 <- read_csv("https://www.siicyt.gob.mx/images/estadisticas/dbabiertas/SNI_Vigentes_2014.csv", 
+    col_types = cols(GENERO = col_factor(levels = c("M","F"))))
+
+t2015_sep <- read_csv("https://www.siicyt.gob.mx/images/estadisticas/dbabiertas/SNI_Vigentes_Sep_2015.csv")
+
+t2015 <- read_csv("https://www.siicyt.gob.mx/images/estadisticas/dbabiertas/SNI_Vigentes_2015.csv",col_select = 1:8,locale = locale(encoding = "latin1"))
+
+t2015=t2015[-c(23317:23319),]
+
+
+t2015_2 <- read_csv("https://www.siicyt.gob.mx/images/estadisticas/dbabiertas/SNI_Vigentes_por_Area_de_conocimiento_2015.csv", locale = locale(encoding = "latin1"))
+
+t2016 <- read_csv("https://www.siicyt.gob.mx/images/estadisticas/dbabiertas/SNI_Vigentes_por_Area_de_conocimiento_2016.csv",locale =locale(encoding = "latin1"))
+
+t2017 <- read_csv("https://www.siicyt.gob.mx/images/estadisticas/dbabiertas/SNI_Vigentes_por_Area_de_conocimiento_2017.csv",locale =locale(encoding = "latin1"))
+```
+
+# Contenido de las tablas  originales
+
+Se muestra una sobresimplificación del contenido original de las tablas:
+
+|**Tablas**                             |**Filas, Columnas**    |**Nombres de columnas contenidas**     |
+|---------------------------------------|:-----------------:|---------------------------------------|
+|SNI Vigentes 2014                      |`r dim(t2014)`     |`r colnames(t2014)`      | 
+|SNI Vigentes 2015                      |`r dim(t2015)`     |`r colnames(t2015)`      |
+|SNI Vigentes Sep 2015                  |`r dim(t2015_sep)` |`r colnames(t2015_sep)`  |
+|SNI Vigentes por área de conocimiento 2015|`r dim(t2015_2)`|`r colnames(t2015_2)`    |
+|SNI Vigentes por área de conocimiento 2016|`r dim(t2016)`  |`r colnames(t2016)`      |
+|SNI Vigentes por área de conocimiento 2017|`r dim(t2017)`  |`r colnames(t2017)`      |
+
+# Transformación de datos y estructuración de variables complementarias
+
+En el siguiente código también se homologan algunos datos en cuestión de género para la reducción de categorías en algunas variables. Se respeta la representación por género en la columna correspondiente. También se transforma el contenido de algunas variables para facilitar su interpretabilidad y la revisión de contenido. 
+
+```{r transformacion1_tablas, echo =TRUE}
+t2014 = t2014 %>% 
+  mutate(GRADO = as.factor(GRADO),
+         NIVEL =as.factor(NIVEL),
+         INSTITUCION=as.factor(INSTITUCION),
+         ESTADO=as.factor(ESTADO)) %>% 
+  mutate(GRADO = fct_recode(GRADO, "MTRO." = "MTRA.",
+                            "DR." = "DRA.")) %>% 
+  mutate(NIVEL = fct_recode(NIVEL, "Candidatx" = "C"),
+         Grado_acad = fct_recode(GRADO, "Licenciatura" = "BIOL.",
+                                 "Licenciatura" = "FIS.",
+                                 "Licenciatura" = "ING.",
+                                 "Licenciatura" = "LIC.",
+                                 "Licenciatura" = "MED.",
+                                 "Licenciatura" = "Q.F.B.",
+                                 "Licenciatura" = "QUIM.",
+                                 "Maestría" = "M. EN A.",
+                                 "Maestría" = "M. EN B.",
+                                 "Maestría" = "M. EN C.",
+                                 "Maestría" = "M. EN I.",
+                                 "Maestría" = "MTRO.",
+                                 "Doctorado" = "DR.",),
+         GENERO = fct_recode(GENERO, "Masculino" = "M", "Femenino" = "F"))
+
+t2015 = t2015 %>% 
+  mutate(NOBILIS = as.factor(NOBILIS),
+        `SEXO*` = as.factor(`SEXO*`),
+        NIVEL = as.factor(NIVEL),
+        DEPENDENCIA = as.factor(DEPENDENCIA),
+        ESTADO = as.factor(ESTADO),
+        `INSTITUCIÓN DE ADSCRIPCIÓN`= as.factor(`INSTITUCIÓN DE ADSCRIPCIÓN`),
+        es_emerito = as.factor(ifelse(is.na(EMERITO),"No eméritx", "Eméritx"))) %>%
+  mutate(NOBILIS = fct_recode(NOBILIS, "MTRO." ="MTRA.",
+                                 "DR."="DRA.")) %>% 
+  mutate(NIVEL = fct_recode(NIVEL, "Candidatx" = "C"),
+         Grado_acad = fct_recode(NOBILIS, "Licenciatura" = "BIOL.",
+                                 "Licenciatura" = "FIS.",
+                                 "Licenciatura" = "ING.",
+                                 "Licenciatura" = "LIC.",
+                                 "Licenciatura" = "MED.",
+                                 "Licenciatura" = "Q.F.B.",
+                                 "Licenciatura" = "Q.B.P.",
+                                 "Licenciatura" = "QUIM.",
+                                 "Maestría" = "M. EN A.",
+                                 "Maestría" = "M. EN B.",
+                                 "Maestría" = "M. EN C.",
+                                 "Maestría" = "M. EN I.",
+                                 "Maestría" = "MTRO.",
+                                 "Doctorado" = "DR."),
+         GENERO = fct_recode(`SEXO*`,"Masculino" = "H", "Femenino" = "M"))
+
+t2015_sep = t2015_sep %>%
+  mutate(GRADO = as.factor(GRADO),
+         NIVEL = as.factor(NIVEL),
+         GENERO = as.factor(GENERO),
+         INSTITUCION = as.factor(INSTITUCION),
+         ESTADO = as.factor(ESTADO)) %>% 
+  mutate(GRADO = fct_recode(GRADO, "DR."= "DRA.",
+                                 "MTRO."="MTRA.")) %>% 
+  mutate(NIVEL = fct_recode(NIVEL, "Candidatx" = "C"),
+         Grado_acad = fct_recode(GRADO, "Licenciatura" = "BIOL.",
+                                 "Licenciatura" = "FIS.",
+                                 "Licenciatura" = "ING.",
+                                 "Licenciatura" = "LIC.",
+                                 "Licenciatura" = "MED.",
+                                 "Licenciatura" = "Q.F.B.",
+                                 "Licenciatura" = "QUIM.",
+                                 "Maestría" = "M. EN A.",
+                                 "Maestría" = "M. EN B.",
+                                 "Maestría" = "M. EN C.",
+                                 "Maestría" = "M. EN I.",
+                                 "Maestría" = "MTRO.",
+                                 "Doctorado" = "DR."),
+         GENERO = fct_recode(GENERO,"Masculino" = "M", "Femenino" = "F"))
+
+
+t2015_2 = t2015_2 %>% 
+  mutate(Grado = as.factor(Grado),
+         Nivel = as.factor(Nivel),
+         `Institución de adcripción` = as.factor(`Institución de adcripción`),
+         `Área de conocimiento` = as.factor(`Área de conocimiento`)) %>% 
+  mutate(Grado = fct_recode(Grado, "DR." = "DR..",
+                                 "DR." = "DRA.",
+                                 "MTRO."= "MTRA.")) %>% 
+  mutate(Nivel = fct_recode(Nivel, "Candidatx" = "C", "3"="4"),
+         Grado_acad = fct_recode(Grado, "Licenciatura" = "BIOL.",
+                                 "Licenciatura" = "FIS.",
+                                 "Licenciatura" = "ING.",
+                                 "Licenciatura" = "LIC.",
+                                 "Licenciatura" = "MED.",
+                                 "Licenciatura" = "Q.F.B.",
+                                 "Licenciatura" = "Q.B.P.",
+                                 "Licenciatura" = "QUIM.",
+                                 "Maestría" = "M. EN A.",
+                                 "Maestría" = "M. EN B.",
+                                 "Maestría" = "M. EN C.",
+                                 "Maestría" = "M. EN I.",
+                                 "Maestría" = "MTRO.",
+                                 "Doctorado" = "DR."))
+
+t2016 = t2016 %>% 
+  mutate(Grado = as.factor(Grado),
+         Nivel = as.factor(Nivel),
+         `Institución de adcripción`= as.factor(`Institución de adcripción`),
+         `Área de conocimiento` = as.factor(`Área de conocimiento`)) %>% 
+  mutate(Grado = fct_recode(Grado,"DR." = "DRA.",
+                                 "MTRO." = "MTRA.")) %>% 
+  mutate(Nivel =fct_recode(Nivel, "Candidatx" = "C", "3"="4"),
+         Grado_acad = fct_recode(Grado, "Licenciatura" = "BIOL.",
+                                 "Licenciatura" = "FIS.",
+                                 "Licenciatura" = "ING.",
+                                 "Licenciatura" = "LIC.",
+                                 "Licenciatura" = "MED.",
+                                 "Licenciatura" = "Q.F.B.",
+                                 "Licenciatura" = "QUIM.",
+                                 "Maestría" = "M. EN A.",
+                                 "Maestría" = "M. EN B.",
+                                 "Maestría" = "M. EN C.",
+                                 "Maestría" = "M. EN I.",
+                                 "Maestría" = "MTRO.",
+                                 "Doctorado" = "DR."))
+
+
+t2017 = t2017 %>% 
+  mutate(Grado = as.factor(Grado),
+         Nivel = as.factor(Nivel),
+         `Institución de adcripción` = as.factor(`Institución de adcripción`),
+         `Área de conocimiento` = as.factor(`Área de conocimiento`)) %>% 
+  mutate(Grado = fct_recode(Grado, "QUIM." = "QUIM",
+                            "MTRO."= "MTRA.",
+                            "DR." = "DRA,",
+                            "DR." = "DRA.")) %>% 
+  mutate(Nivel =fct_recode(Nivel, "Candidatx" = "C", "3"="4"),
+         Grado_acad = fct_recode(Grado, "Licenciatura" = "BIOL.",
+                                 "Licenciatura" = "BIOQ.",
+                                 "Licenciatura" = "FIS.",
+                                 "Licenciatura" = "ING.",
+                                 "Licenciatura" = "LIC.",
+                                 "Licenciatura" = "MED.",
+                                 "Licenciatura" = "MAT.",
+                                 "Licenciatura" = "Q.F.B.",
+                                 "Licenciatura" = "QUIM.",
+                                 "Maestría" = "M. EN A.",
+                                 "Maestría" = "M. EN B.",
+                                 "Maestría" = "M. EN C.",
+                                 "Maestría" = "M. EN I.",
+                                 "Maestría" = "MTRO.",
+                                 "Doctorado" = "DR."))
+```
+
+# Limpieza de nombres
+
+Debido a que en la carga de las tablas originales se presentaron algunos problemas, se realiza una transformación en los nombres de las variables originales
+
+```{r limpieza_variables, echo = TRUE, warning=FALSE, message=FALSE}
+library(janitor)
+
+t2014 = clean_names(t2014)
+t2015 = clean_names(t2015)
+t2015_sep = clean_names(t2015_sep)
+t2015_2 = clean_names(t2015_2)
+t2016 = clean_names(t2016)
+t2017 = clean_names(t2017)
+```
+
+# Contenido de las tablas finales
+
+Se muestra una sobresimplificación del contenido de las tablas modificadas:
+
+|**Tablas**                             |**Filas, Columnas**    |**Nombres de columnas contenidas**     |
+|---------------------------------------|:-----------------:|---------------------------------------|
+|SNI Vigentes 2014                      |`r dim(t2014)`     |`r colnames(t2014)`      | 
+|SNI Vigentes 2015                      |`r dim(t2015)`     |`r colnames(t2015)`      |
+|SNI Vigentes Sep 2015                  |`r dim(t2015_sep)` |`r colnames(t2015_sep)`  |
+|SNI Vigentes por área de conocimiento 2015|`r dim(t2015_2)`|`r colnames(t2015_2)`    |
+|SNI Vigentes por área de conocimiento 2016|`r dim(t2016)`  |`r colnames(t2016)`      |
+|SNI Vigentes por área de conocimiento 2017|`r dim(t2017)`  |`r colnames(t2017)`      |
+
+
+
+
+
