@@ -5,7 +5,8 @@ date: "2022-10-04"
 output: 
   html_document: 
     toc: yes
-    toc_depth: 5
+    toc_depth: 1
+    toc_float: yes
     highlight: espresso
     theme: readable
     df_print: kable
