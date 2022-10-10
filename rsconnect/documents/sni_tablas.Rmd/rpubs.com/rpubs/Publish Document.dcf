@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/951395/7e3490473ab14d689603dd10e643d173
+bundleId: https://api.rpubs.com/api/v1/document/951395/7e3490473ab14d689603dd10e643d173
+url: http://rpubs.com/Gus_R_A/951395
+when: 1664903939.24797
+lastSyncTime: 1664903939.24799
